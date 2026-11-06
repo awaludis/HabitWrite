@@ -35,6 +35,18 @@ npm test           # unit test (skor, deteksi kata kunci, deteksi salinan)
 Hasil `dist/` adalah file statis dan bisa di-hosting di mana saja (GitHub Pages, Netlify, server internal).
 Agar bisa dipasang sebagai PWA, situs harus diakses lewat HTTPS (atau `localhost`).
 
+## Deploy ke GitHub Pages
+
+Repo ini sudah punya workflow `.github/workflows/deploy-pages.yml` yang mem-build aplikasi lalu memublikasikan folder `dist/`.
+
+1. Buka repo di GitHub → **Settings → Pages**.
+2. Di **Build and deployment → Source**, pilih **GitHub Actions** (bukan "Deploy from a branch" — itu yang membuat halaman kosong).
+3. Buka tab **Actions** → **Deploy to GitHub Pages** → **Run workflow** (atau cukup push ke branch).
+4. Setelah selesai, aplikasi ada di `https://<username>.github.io/HabitWrite/`.
+
+Memasang di HP: buka alamat itu di Chrome (Android) → menu ⋮ → **Instal aplikasi / Tambahkan ke layar utama**.
+Di iPhone: buka di Safari → tombol Bagikan → **Tambah ke Layar Utama**.
+
 ## API key dan keamanan
 
 Aplikasi memanggil Claude API langsung dari browser memakai API key yang diisi pengguna di **Pengaturan**.
