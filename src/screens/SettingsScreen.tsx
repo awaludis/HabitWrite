@@ -1,10 +1,27 @@
 import { useState } from "react";
+import { keyFormatWarning, testConnection } from "../lib/ai";
 import { DEFAULT_SCORING } from "../lib/scoring";
 import { MODELS, type AppSettings, type Effort } from "../lib/storage";
 
 export function SettingsScreen({ settings, onSave }: { settings: AppSettings; onSave: (s: AppSettings) => void }) {
   const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+  const formatWarning = keyFormatWarning(s.apiKey);
+
+  const runTest = async () => {
+    setTesting(true);
+    setTest(null);
+    try {
+      setTest({ ok: true, msg: await testConnection(s) });
+    } catch (e) {
+      setTest({ ok: false, msg: (e as Error).message });
+    } finally {
+      setTesting(false);
+    }
+  };
   const scoring = s.scoring;
   const setScoring = (patch: Partial<typeof scoring>) => setS({ ...s, scoring: { ...scoring, ...patch } });
 
@@ -23,14 +40,31 @@ export function SettingsScreen({ settings, onSave }: { settings: AppSettings; on
         <h2>Koneksi Claude</h2>
         <label className="field">
           <span>API key Anthropic</span>
-          <input
-            type="password"
-            autoComplete="off"
-            value={s.apiKey}
-            onChange={(e) => setS({ ...s, apiKey: e.target.value.trim() })}
-            placeholder="sk-ant-…"
-          />
+          <div className="row nowrap">
+            <input
+              type={showKey ? "text" : "password"}
+              name="anthropic-api-key"
+              autoComplete="new-password"
+              spellCheck={false}
+              value={s.apiKey}
+              // Strip all whitespace/newlines that often sneak in when copying the key.
+              onChange={(e) => {
+                setS({ ...s, apiKey: e.target.value.replace(/\s+/g, "") });
+                setTest(null);
+              }}
+              placeholder="sk-ant-api03-…"
+            />
+            <button type="button" className="btn small" onClick={() => setShowKey(!showKey)}>
+              {showKey ? "Sembunyikan" : "Tampilkan"}
+            </button>
+          </div>
         </label>
+        {s.apiKey && (
+          <p className="muted small">
+            Terisi: <code>{s.apiKey.slice(0, 14)}…{s.apiKey.slice(-4)}</code> ({s.apiKey.length} karakter)
+          </p>
+        )}
+        {formatWarning && <div className="notice warn">{formatWarning}</div>}
         <p className="muted small">
           Key disimpan hanya di perangkat ini (penyimpanan browser) dan dikirim langsung ke Claude API. Jangan gunakan aplikasi ini
           dengan key milik orang lain di perangkat bersama.
@@ -61,6 +95,13 @@ export function SettingsScreen({ settings, onSave }: { settings: AppSettings; on
             </select>
           </label>
         </div>
+        <div className="row">
+          <button type="button" className="btn" onClick={runTest} disabled={testing || (!s.apiKey && !s.baseUrl)}>
+            {testing ? "Mengetes…" : "Tes koneksi"}
+          </button>
+          <span className="muted small">Mengecek key dan model tanpa memakai kredit.</span>
+        </div>
+        {test && <div className={`notice ${test.ok ? "ok" : "error"}`}>{test.msg}</div>}
       </section>
 
       <section className="card">

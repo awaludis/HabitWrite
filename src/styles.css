@@ -106,6 +106,10 @@ input:focus, select:focus, textarea:focus, .btn:focus-visible { outline: 2px sol
 .notice.warn { background: var(--mid-bg); color: var(--text); border-color: color-mix(in srgb, var(--mid) 40%, transparent); }
 .notice.error { background: var(--low-bg); color: var(--text); border-color: color-mix(in srgb, var(--low) 40%, transparent); margin-top: 12px; }
 .notice ul { margin: 6px 0 0; }
+.notice.ok { background: var(--good-bg); color: var(--text); border-color: color-mix(in srgb, var(--good) 40%, transparent); margin-top: 12px; }
+.row.nowrap { flex-wrap: nowrap; }
+.row.nowrap input { flex: 1; }
+code { font-family: ui-monospace, monospace; font-size: 0.9em; }
 .warn-text { color: var(--low); font-weight: 600; }
 mark { background: var(--mid-bg); color: inherit; padding: 0 2px; }
 

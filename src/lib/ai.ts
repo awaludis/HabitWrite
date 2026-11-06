@@ -132,14 +132,53 @@ async function ask<S extends z.ZodType>(
     if (!response.parsed_output) throw new AiError("Jawaban AI tidak bisa dibaca. Silakan coba lagi.");
     return response.parsed_output as z.infer<S>;
   } catch (e) {
-    if (e instanceof AiError) throw e;
-    if (e instanceof Anthropic.AuthenticationError) throw new AiError("API key tidak valid. Periksa di Pengaturan.");
-    if (e instanceof Anthropic.PermissionDeniedError) throw new AiError("API key tidak punya akses ke model ini.");
-    if (e instanceof Anthropic.NotFoundError) throw new AiError("Model tidak ditemukan. Pilih model lain di Pengaturan.");
-    if (e instanceof Anthropic.RateLimitError) throw new AiError("Batas pemakaian API tercapai. Tunggu sebentar lalu coba lagi.");
-    if (e instanceof Anthropic.APIConnectionError) throw new AiError("Tidak bisa terhubung ke Claude. Periksa koneksi internet.");
-    if (e instanceof Anthropic.APIError) throw new AiError(`Kesalahan dari Claude API (${e.status ?? "?"}): ${e.message}`);
-    throw e;
+    throw friendlyError(e);
+  }
+}
+
+/** Short reason from the API error body, e.g. "invalid x-api-key". */
+function apiDetail(e: InstanceType<typeof Anthropic.APIError>): string {
+  const body = e.error as { error?: { message?: string } } | undefined;
+  return body?.error?.message ?? e.message;
+}
+
+function friendlyError(e: unknown): Error {
+  if (e instanceof AiError) return e;
+  if (e instanceof Anthropic.AuthenticationError) {
+    return new AiError(
+      `API key ditolak oleh Claude API (401: ${apiDetail(e)}). Pastikan key dibuat di console.anthropic.com → API Keys, ` +
+        `diawali "sk-ant-api", disalin utuh, dan belum dihapus/dinonaktifkan. Gunakan tombol "Tes koneksi" di Pengaturan.`,
+    );
+  }
+  if (e instanceof Anthropic.PermissionDeniedError) return new AiError(`API key tidak punya akses ke model ini (403: ${apiDetail(e)}).`);
+  if (e instanceof Anthropic.NotFoundError) return new AiError(`Model tidak ditemukan (404: ${apiDetail(e)}). Pilih model lain di Pengaturan.`);
+  if (e instanceof Anthropic.RateLimitError) return new AiError("Batas pemakaian API tercapai. Tunggu sebentar lalu coba lagi.");
+  if (e instanceof Anthropic.APIConnectionError) return new AiError("Tidak bisa terhubung ke Claude. Periksa koneksi internet atau alamat proxy.");
+  if (e instanceof Anthropic.BadRequestError && /credit balance/i.test(apiDetail(e))) {
+    return new AiError("Saldo kredit API habis. Isi saldo di console.anthropic.com → Billing.");
+  }
+  if (e instanceof Anthropic.APIError) return new AiError(`Kesalahan dari Claude API (${e.status ?? "?"}): ${apiDetail(e)}`);
+  return e instanceof Error ? e : new Error(String(e));
+}
+
+/** Warns about keys that are clearly not Claude API keys (checked before any request). */
+export function keyFormatWarning(key: string): string | null {
+  if (!key) return null;
+  if (key.startsWith("sk-ant-api")) return null;
+  if (key.startsWith("sk-ant-admin")) return "Ini Admin key. Aplikasi butuh API key biasa (diawali sk-ant-api…).";
+  if (key.startsWith("sk-ant-oat") || key.startsWith("sk-ant-ort"))
+    return "Ini token login Claude Code/claude.ai, bukan API key. Buat API key di console.anthropic.com → API Keys.";
+  if (key.startsWith("sk-") && !key.startsWith("sk-ant-")) return "Ini bukan key Anthropic (mungkin key layanan lain). Claude API key diawali sk-ant-api…";
+  return "Format key tidak dikenal. Claude API key biasanya diawali sk-ant-api…";
+}
+
+/** Checks the key and model without spending tokens. */
+export async function testConnection(settings: AppSettings): Promise<string> {
+  try {
+    const m = await client(settings).models.retrieve(settings.model);
+    return `Terhubung. Key valid dan model ${m.display_name ?? m.id} bisa dipakai.`;
+  } catch (e) {
+    throw friendlyError(e);
   }
 }
 
