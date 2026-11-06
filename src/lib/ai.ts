@@ -161,15 +161,28 @@ function friendlyError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e));
 }
 
-/** Warns about keys that are clearly not Claude API keys (checked before any request). */
+/**
+ * Cleans a pasted key: drops a copied header name ("x-api-key:", "Authorization: Bearer"),
+ * surrounding quotes, and any whitespace or line breaks.
+ */
+export function normalizeKey(raw: string): string {
+  let k = raw.trim().replace(/^["'`]|["'`,;]$/g, "");
+  k = k.replace(/^(?:x-api-key|authorization)\s*[:=]\s*/i, "");
+  k = k.replace(/^bearer\s+/i, "");
+  return k.replace(/^["'`]|["'`,;]$/g, "").replace(/\s+/g, "");
+}
+
+/** Warns about keys that are clearly not usable for the Messages API (checked before any request). */
 export function keyFormatWarning(key: string): string | null {
   if (!key) return null;
   if (key.startsWith("sk-ant-api")) return null;
-  if (key.startsWith("sk-ant-admin")) return "Ini Admin key. Aplikasi butuh API key biasa (diawali sk-ant-api…).";
+  if (key.startsWith("sk-ant-admin")) return "Ini Admin key. Admin key tidak bisa dipakai untuk menilai tulisan; buat API key biasa (sk-ant-api…) di console.anthropic.com → API Keys.";
   if (key.startsWith("sk-ant-oat") || key.startsWith("sk-ant-ort"))
-    return "Ini token login Claude Code/claude.ai, bukan API key. Buat API key di console.anthropic.com → API Keys.";
-  if (key.startsWith("sk-") && !key.startsWith("sk-ant-")) return "Ini bukan key Anthropic (mungkin key layanan lain). Claude API key diawali sk-ant-api…";
-  return "Format key tidak dikenal. Claude API key biasanya diawali sk-ant-api…";
+    return "Ini token login (OAuth), bukan API key. Buat API key di console.anthropic.com → API Keys.";
+  if (key.startsWith("sk-ant-"))
+    return `Key berawalan "${key.split("-").slice(0, 3).join("-")}-" bukan API key biasa dari Console (sk-ant-api…). Klik "Tes koneksi" untuk memastikan key ini bisa dipakai; jika ditolak, buat API key biasa di console.anthropic.com → API Keys.`;
+  if (key.startsWith("sk-")) return "Ini bukan key Anthropic (mungkin key layanan lain). Claude API key diawali sk-ant-api…";
+  return "Format key tidak dikenal. Isi hanya key-nya saja (diawali sk-ant-…), tanpa nama header.";
 }
 
 /** Checks the key and model without spending tokens. */

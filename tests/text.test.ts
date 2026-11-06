@@ -39,3 +39,19 @@ describe("detectCopied", () => {
     expect(r.copied).toHaveLength(0);
   });
 });
+
+import { keyFormatWarning, normalizeKey } from "../src/lib/ai";
+
+describe("normalizeKey", () => {
+  it("strips copied header names, quotes and whitespace", () => {
+    expect(normalizeKey("x-api-key: sk-ant-usr-abc123")).toBe("sk-ant-usr-abc123");
+    expect(normalizeKey("X-API-KEY:sk-ant-api03-abc")).toBe("sk-ant-api03-abc");
+    expect(normalizeKey("Authorization: Bearer sk-ant-api03-abc")).toBe("sk-ant-api03-abc");
+    expect(normalizeKey(' "sk-ant-api03-abc"\n')).toBe("sk-ant-api03-abc");
+    expect(normalizeKey("sk-ant-api03-ab c\nd")).toBe("sk-ant-api03-abcd");
+  });
+  it("gives a soft warning for non-standard sk-ant keys", () => {
+    expect(keyFormatWarning("sk-ant-api03-abc")).toBeNull();
+    expect(keyFormatWarning("sk-ant-usr-abc")).toContain("sk-ant-usr-");
+  });
+});

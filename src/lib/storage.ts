@@ -55,7 +55,12 @@ export function loadSettings(): AppSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed, scoring: { ...DEFAULT_SCORING, ...parsed.scoring } };
+    const apiKey = (parsed.apiKey ?? "")
+      .trim()
+      .replace(/^(?:x-api-key|authorization)\s*[:=]\s*/i, "")
+      .replace(/^bearer\s+/i, "")
+      .replace(/\s+/g, "");
+    return { ...DEFAULT_SETTINGS, ...parsed, apiKey, scoring: { ...DEFAULT_SCORING, ...parsed.scoring } };
   } catch {
     return DEFAULT_SETTINGS;
   }

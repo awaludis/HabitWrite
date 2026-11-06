@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { keyFormatWarning, testConnection } from "../lib/ai";
+import { keyFormatWarning, normalizeKey, testConnection } from "../lib/ai";
 import { DEFAULT_SCORING } from "../lib/scoring";
 import { MODELS, type AppSettings, type Effort } from "../lib/storage";
 
@@ -47,9 +47,9 @@ export function SettingsScreen({ settings, onSave }: { settings: AppSettings; on
               autoComplete="new-password"
               spellCheck={false}
               value={s.apiKey}
-              // Strip all whitespace/newlines that often sneak in when copying the key.
+              // Strip header names, quotes and whitespace that often sneak in when copying the key.
               onChange={(e) => {
-                setS({ ...s, apiKey: e.target.value.replace(/\s+/g, "") });
+                setS({ ...s, apiKey: normalizeKey(e.target.value) });
                 setTest(null);
               }}
               placeholder="sk-ant-api03-…"
